@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pomodoro log</title>
+<link rel="icon" id="fav" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='36' r='26' fill='%23d63a25'/%3E%3Cpath d='M32 10c-4-6-12-6-14-3 5 1 9 3 14 5 5-2 9-4 14-5-2-3-10-3-14 3z' fill='%232c8a56'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* VOICE: practical, friendly kitchen-tool; few words, big numbers.
+   IDEA: a mechanical kitchen timer — a dial with ticks that drains as time runs.
+   PICTURE: the large dial with progress ring, cycle beads underneath.
+   COLOUR and TYPE: full-bleed mode colour (tomato / leaf / deep blue), white ink; Archivo 800 digits + Inter.
+   LAYOUT: dial band on top with controls; log + settings below in two columns, stacked on phones. */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#141416);--ink:light-dark(#1b1b1d,#ececee);--mute:light-dark(#6b6b72,#9a9aa3);--line:light-dark(#e6e6ea,#2a2a2f);--card:light-dark(#f6f6f8,#1c1c20);
+--work:light-dark(#d63a25,#a92c1c);--short:light-dark(#2c8a56,#1f6a41);--long:light-dark(#2a5bb0,#1f4483);--m:var(--work)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+body[data-mode=short]{--m:var(--short)}body[data-mode=long]{--m:var(--long)}
+.band{padding:clamp(28px,4vw,64px) max(5vw,16px)}
+.top{background:var(--m);color:#fff;transition:background .6s}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font:700 22px/1.05 Archivo,sans-serif;margin:0 0 4px}
+.sub{opacity:.85;margin:0;font-size:15px}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,4vw,56px);align-items:center;margin-top:24px}
+.dial{position:relative;width:min(420px,100%);aspect-ratio:1;justify-self:center}
+.dial svg{width:100%;height:100%;display:block}
+.read{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.time{font:800 clamp(56px,11vw,96px)/1 Archivo,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.mode{font:600 17px/1.2 Inter,sans-serif;margin-top:8px;opacity:.9}
+.beads{display:flex;gap:10px;justify-content:center;margin-top:14px}
+.bead{width:14px;height:14px;border-radius:50%;border:2px solid #fff;opacity:.9}
+.bead.on{background:#fff}
+.side{display:grid;gap:16px}
+label{font-size:14px;font-weight:500}
+.task{width:100%;font:16px Inter,sans-serif;padding:12px 14px;border-radius:12px;border:2px solid rgba(255,255,255,.35);background:rgba(0,0,0,.14);color:#fff;min-height:48px}
+.task::placeholder{color:rgba(255,255,255,.7)}
+.task:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.ctl{display:flex;flex-wrap:wrap;gap:10px}
+button{font:600 16px Inter,sans-serif;min-height:48px;padding:0 20px;border-radius:999px;border:0;cursor:pointer}
+button:focus-visible{outline:3px solid currentColor;outline-offset:3px}
+.go{background:#fff;color:var(--m);font-size:18px;padding:0 34px;min-width:150px}
+.ghost{background:rgba(0,0,0,.16);color:#fff}
+.ghost:hover{background:rgba(0,0,0,.26)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.4);min-height:40px;padding:0 14px;font-size:14px}
+.tab[aria-pressed=true]{background:#fff;color:var(--m);border-color:#fff}
+.stats{display:flex;gap:28px;flex-wrap:wrap}
+.stats b{display:block;font:800 30px/1.1 Archivo,sans-serif;font-variant-numeric:tabular-nums}
+.stats span{font-size:14px;opacity:.85}
+.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:clamp(24px,4vw,48px);align-items:start}
+h2{font:700 24px/1.1 Archivo,sans-serif;margin:0 0 6px}
+.hint{color:var(--mute);font-size:14px;margin:0 0 16px}
+.log{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.log li{display:grid;grid-template-columns:12px 92px minmax(0,1fr) auto 40px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.dot{width:12px;height:12px;border-radius:50%}
+.dot.work{background:var(--work)}.dot.short{background:var(--short)}.dot.long{background:var(--long)}
+.when{color:var(--mute);font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.what{overflow-wrap:anywhere}
+.dur{font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right}
+.del{background:transparent;color:var(--mute);min-height:40px;width:40px;padding:0;font-size:20px;line-height:1}
+.del:hover{color:var(--work)}
+.empty{color:var(--mute);padding:20px 0;border-bottom:1px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.btn2{background:var(--card);color:var(--ink);border:1px solid var(--line);font-size:15px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+.f{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:10px;align-items:center;margin-bottom:12px}
+.f input[type=number]{font:16px Inter,sans-serif;width:100%;min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-align:right}
+.chk{display:flex;gap:10px;align-items:center;min-height:44px}
+.chk input{width:22px;height:22px;accent-color:var(--work)}
+.manual{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:10px}
+.manual input{font:16px Inter,sans-serif;min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.csv{width:100%;font:14px/1.4 ui-monospace,Consolas,monospace;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:15px;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+@media(max-width:760px){.hero,.grid{grid-template-columns:minmax(0,1fr)}.go{flex:1}}
+@media(max-width:480px){.log li{grid-template-columns:12px minmax(0,1fr) auto 40px}.when{grid-column:2;grid-row:2;margin-top:-6px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body data-mode="work">
+<section class="band top">
+  <div class="wrap">
+    <h1>Pomodoro log</h1>
+    <p class="sub">Trabajo → descanso automático → cada 3 bloques, descanso largo.</p>
+    <div class="hero">
+      <div class="dial">
+        <svg viewBox="0 0 300 300" aria-hidden="true">
+          <g id="ticks"></g>
+          <circle cx="150" cy="150" r="118" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="14"/>
+          <circle id="ring" cx="150" cy="150" r="118" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round" transform="rotate(-90 150 150)" stroke-dasharray="741.4" stroke-dashoffset="0"/>
+        </svg>
+        <div class="read">
+          <div class="time" id="time">25:00</div>
+          <div class="mode" id="modeLbl">Trabajo</div>
+          <div class="beads" id="beads"></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="tabs" role="group" aria-label="Modo">
+          <button class="tab" data-m="work" aria-pressed="true">Trabajo</button>
+          <button class="tab" data-m="short" aria-pressed="false">Descanso</button>
+          <button class="tab" data-m="long" aria-pressed="false">Descanso largo</button>
+        </div>
+        <div>
+          <label for="task">¿En qué estás trabajando?</label>
+          <input id="task" class="task" placeholder="Ej: TP aeroelasticidad, flutter" autocomplete="off">
+        </div>
+        <div class="ctl">
+          <button class="go" id="go">Arrancar</button>
+          <button class="ghost" id="skip" title="Termina el bloque ahora y registra lo hecho">Terminar bloque</button>
+          <button class="ghost" id="reset" title="Reinicia el bloque sin registrar">Reiniciar</button>
+        </div>
+        <div class="stats">
+          <div><b id="sFocus">0 min</b><span>de foco hoy</span></div>
+          <div><b id="sBlocks">0</b><span>bloques hoy</span></div>
+          <div><b id="sBreak">0 min</b><span>de descanso</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap grid">
+    <div>
+      <h2>Registro de hoy</h2>
+      <p class="hint">Cada bloque terminado se guarda solo. Los que cortás antes se guardan con el tiempo real.</p>
+      <ul class="log" id="log"></ul>
+      <div class="row">
+        <button class="btn2" id="copy">Copiar como CSV</button>
+        <button class="btn2" id="showAll" aria-pressed="false">Ver todos los días</button>
+        <button class="btn2" id="clear">Borrar hoy</button>
+      </div>
+    </div>
+    <div class="side">
+      <div class="card">
+        <h2>Ajustes</h2>
+        <div class="f"><label for="cWork">Trabajo (min)</label><input type="number" id="cWork" min="1" max="180"></div>
+        <div class="f"><label for="cShort">Descanso corto (min)</label><input type="number" id="cShort" min="1" max="60"></div>
+        <div class="f"><label for="cLong">Descanso largo (min)</label><input type="number" id="cLong" min="1" max="90"></div>
+        <div class="f"><label for="cEvery">Largo cada N bloques</label><input type="number" id="cEvery" min="1" max="12"></div>
+        <label class="chk"><input type="checkbox" id="cAuto"> Arrancar el siguiente bloque solo</label>
+        <label class="chk"><input type="checkbox" id="cSound"> Sonido al terminar</label>
+      </div>
+      <div class="card">
+        <h2>Cargar a mano</h2>
+        <p class="hint">Para algo que hiciste sin el timer.</p>
+        <div class="manual">
+          <input id="mLabel" placeholder="Qué hiciste" aria-label="Qué hiciste">
+          <input id="mMin" type="number" min="1" placeholder="min" aria-label="Minutos">
+        </div>
+        <div class="row"><button class="btn2" id="mAdd">Agregar bloque</button></div>
+      </div>
+      <div class="card">
+        <h2>Importar CSV</h2>
+        <p class="hint">Pegá lo que copiaste con "Copiar como CSV". Respeta fechas y horarios; los bloques repetidos se saltean.</p>
+        <textarea id="iCsv" class="csv" rows="5" aria-label="CSV a importar" placeholder="fecha,inicio,fin,tipo,minutos,tarea"></textarea>
+        <div class="row"><button class="btn2" id="iAdd">Importar</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const NAMES={work:'Trabajo',short:'Descanso',long:'Descanso largo'};
+const C=741.4;
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let cfg=Object.assign({work:25,short:5,long:15,every:3,auto:true,sound:true},store.get('pomo.cfg',{}));
+let log=store.get('pomo.log',[]);
+let st=Object.assign({mode:'work',running:false,endAt:0,remaining:cfg.work*60000,startAt:0,count:0,task:''},store.get('pomo.st',{}));
+let showAll=false;
+
+const dur=m=>cfg[m]*60000;
+const save=()=>{store.set('pomo.cfg',cfg);store.set('pomo.log',log);store.set('pomo.st',st)};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const hm=t=>new Date(t).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+const dayKey=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const minTxt=m=>m>=60?Math.floor(m/60)+' h '+(Math.round(m%60))+' min':Math.round(m)+' min';
+const toast=t=>{const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.remove('show'),2200)};
+
+// ticks
+$('ticks').innerHTML=Array.from({length:60},(_,i)=>{const a=i*6*Math.PI/180,big=i%5===0,r1=big?136:140,r2=146;
+  return `<line x1="${150+r1*Math.sin(a)}" y1="${150-r1*Math.cos(a)}" x2="${150+r2*Math.sin(a)}" y2="${150-r2*Math.cos(a)}" stroke="rgba(255,255,255,${big?.9:.45})" stroke-width="${big?3:1.5}" stroke-linecap="round"/>`}).join('');
+
+let actx=null;
+function beep(){if(!cfg.sound)return;try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+  [0,.28,.56].forEach((d,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=i===2?988:784;
+  g.gain.setValueAtTime(0,actx.currentTime+d);g.gain.linearRampToValueAtTime(.25,actx.currentTime+d+.02);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+d+.25);
+  o.connect(g).connect(actx.destination);o.start(actx.currentTime+d);o.stop(actx.currentTime+d+.3)})}catch(e){}}
+
+function remaining(){return st.running?st.endAt-Date.now():st.remaining}
+
+function addEntry(type,start,end,label){
+  const mins=(end-start)/60000; if(mins<0.5)return;
+  log.push({id:Date.now()+Math.random(),type,start,end,mins:Math.round(mins*10)/10,label:type==='work'?(label||'Sin etiqueta'):NAMES[type]});
+}
+
+function advance(endTime){
+  // log the block that just ended
+  const elapsed=dur(st.mode)-Math.max(0,st.running?st.endAt-endTime:st.remaining);
+  addEntry(st.mode,endTime-elapsed,endTime,st.task);
+  let next;
+  if(st.mode==='work'){st.count++;next=(st.count%cfg.every===0)?'long':'short'}
+  else{if(st.mode==='long')st.count=0;next='work'}
+  const wasRunning=st.running;
+  st.mode=next;st.remaining=dur(next);st.running=false;
+  if(cfg.auto&&wasRunning)start(endTime);
+  beep();toast(NAMES[next]+(st.running?' — arrancó solo':' — listo para arrancar'));
+  save();render();
+}
+
+function start(from){st.running=true;st.endAt=(from||Date.now())+st.remaining;save();render()}
+function pause(){st.remaining=Math.max(0,st.endAt-Date.now());st.running=false;save();render()}
+function setMode(m){st.mode=m;st.running=false;st.remaining=dur(m);save();render()}
+
+function tick(){
+  if(st.running&&Date.now()>=st.endAt){advance(st.endAt);return}
+  const r=remaining(),total=dur(st.mode);
+  $('time').textContent=fmt(r);
+  $('ring').setAttribute('stroke-dashoffset',(C*(1-Math.max(0,Math.min(1,r/total)))).toFixed(1));
+  document.title=(st.running?fmt(r)+' · ':'')+NAMES[st.mode];
+  setFav(r/total);
+}
+
+// favicon: mode-coloured dial that drains with the block
+const FAVC={work:'#d63a25',short:'#2c8a56',long:'#2a5bb0'};let lastFav='';
+function setFav(p){
+  p=Math.max(0,Math.min(1,p));const k=st.mode+Math.round(p*40)+st.running;if(k===lastFav)return;lastFav=k;
+  const a=p*2*Math.PI,x=32+24*Math.sin(a),y=32-24*Math.cos(a),big=p>.5?1:0;
+  const arc=p>=.999?`<circle cx='32' cy='32' r='24' fill='none' stroke='#fff' stroke-width='8'/>`:p>0?`<path d='M32 8A24 24 0 ${big} 1 ${x.toFixed(2)} ${y.toFixed(2)}' fill='none' stroke='#fff' stroke-width='8' stroke-linecap='round'/>`:'';
+  const svg=`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='32' fill='${FAVC[st.mode]}'/><circle cx='32' cy='32' r='24' fill='none' stroke='rgba(0,0,0,.25)' stroke-width='8'/>${arc}</svg>`;
+  $('fav').href='data:image/svg+xml,'+encodeURIComponent(svg);
+}
+
+function render(){
+  document.body.dataset.mode=st.mode;
+  $('modeLbl').textContent=NAMES[st.mode]+(st.mode==='work'?` · bloque ${(st.count%cfg.every)+1} de ${cfg.every}`:'');
+  $('go').textContent=st.running?'Pausar':(st.remaining<dur(st.mode)?'Seguir':'Arrancar');
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===st.mode));
+  const done=st.count%cfg.every, full=st.mode==='long';
+  $('beads').innerHTML=Array.from({length:cfg.every},(_,i)=>`<span class="bead${full||i<done?' on':''}"></span>`).join('');
+  const today=dayKey(Date.now()), td=log.filter(e=>dayKey(e.start)===today);
+  const w=td.filter(e=>e.type==='work');
+  $('sFocus').textContent=minTxt(w.reduce((a,e)=>a+e.mins,0));
+  $('sBlocks').textContent=w.length;
+  $('sBreak').textContent=minTxt(td.filter(e=>e.type!=='work').reduce((a,e)=>a+e.mins,0));
+  const list=(showAll?log:td).slice().reverse();
+  $('log').innerHTML=list.length?list.map(e=>`<li><span class="dot ${e.type}"></span><span class="when">${showAll?esc(dayKey(e.start).slice(5))+' ':''}${hm(e.start)}–${hm(e.end)}</span><span class="what">${esc(e.label)}</span><span class="dur">${esc(e.mins)} min</span><button class="del" data-id="${e.id}" aria-label="Borrar">×</button></li>`).join('')
+    :'<li class="empty" style="display:block">Todavía nada. Arrancá un bloque y aparece acá.</li>';
+  ['work','short','long','every'].forEach(k=>$('c'+k[0].toUpperCase()+k.slice(1)).value=cfg[k]);
+  $('cAuto').checked=cfg.auto;$('cSound').checked=cfg.sound;
+  tick();
+}
+
+$('go').onclick=()=>{try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume()}catch(e){} st.running?pause():start()};
+$('skip').onclick=()=>advance(Date.now());
+$('reset').onclick=()=>setMode(st.mode);
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+$('task').value=st.task;
+$('task').oninput=e=>{st.task=e.target.value;save()};
+$('log').onclick=e=>{const b=e.target.closest('.del');if(!b)return;log=log.filter(x=>String(x.id)!==b.dataset.id);save();render()};
+['work','short','long','every'].forEach(k=>{$('c'+k[0].toUpperCase()+k.slice(1)).onchange=e=>{const v=Math.max(1,Math.round(+e.target.value||1));cfg[k]=v;
+  if(k!=='every'&&st.mode===k&&!st.running&&st.remaining>=0)st.remaining=dur(k);save();render()}});
+$('cAuto').onchange=e=>{cfg.auto=e.target.checked;save()};
+$('cSound').onchange=e=>{cfg.sound=e.target.checked;save()};
+$('showAll').onclick=e=>{showAll=!showAll;e.target.setAttribute('aria-pressed',showAll);e.target.textContent=showAll?'Ver solo hoy':'Ver todos los días';render()};
+$('clear').onclick=e=>{const b=e.target;if(b.dataset.arm){const t=dayKey(Date.now());log=log.filter(x=>dayKey(x.start)!==t);delete b.dataset.arm;b.textContent='Borrar hoy';save();render();return}
+  b.dataset.arm=1;b.textContent='¿Seguro? Tocá de nuevo';setTimeout(()=>{delete b.dataset.arm;b.textContent='Borrar hoy'},3000)};
+$('copy').onclick=async()=>{const rows=[['fecha','inicio','fin','tipo','minutos','tarea']].concat(log.map(e=>[dayKey(e.start),hm(e.start),hm(e.end),NAMES[e.type],e.mins,'"'+String(e.label).replace(/"/g,'""')+'"']));
+  try{await navigator.clipboard.writeText(rows.map(r=>r.join(',')).join('\n'));toast('CSV copiado')}catch(err){toast('No pude copiar al portapapeles')}};
+$('mAdd').onclick=()=>{const m=+$('mMin').value;if(!(m>0)){toast('Poné los minutos');return}const end=Date.now();
+  log.push({id:end+Math.random(),type:'work',start:end-m*60000,end,mins:m,label:$('mLabel').value||'Sin etiqueta'});$('mLabel').value='';$('mMin').value='';save();render();toast('Bloque agregado')};
+function splitCsv(line){const out=[];let cur='',q=false;for(let i=0;i<line.length;i++){const c=line[i];
+  if(q){if(c==='"'){if(line[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+  else if(c==='"')q=true;else if(c===','){out.push(cur);cur=''}else cur+=c}out.push(cur);return out.map(s=>s.trim())}
+function parseTime(date,t){const m=/(\d{1,2}):(\d{2})/.exec(t);const d=/(\d{4})-(\d{1,2})-(\d{1,2})/.exec(date);if(!m||!d)return NaN;
+  let h=+m[1];const low=t.toLowerCase().replace(/[\s.]/g,'');if(/pm$/.test(low)&&h<12)h+=12;if(/am$/.test(low)&&h===12)h=0;
+  return new Date(+d[1],+d[2]-1,+d[3],h,+m[2]).getTime()}
+const TYPES={'trabajo':'work','descanso':'short','descanso largo':'long'};
+$('iAdd').onclick=()=>{let added=0,skipped=0,bad=0;
+  $('iCsv').value.split(/\r?\n/).forEach(line=>{if(!line.trim()||/^fecha,/i.test(line.trim()))return;
+    const [fecha,ini,fin,tipo,mins,...rest]=splitCsv(line);const type=TYPES[(tipo||'').toLowerCase()];
+    const start=parseTime(fecha,ini||'');let end=parseTime(fecha,fin||'');
+    if(!type||isNaN(start)){bad++;return}
+    if(isNaN(end))end=start+(+mins||0)*60000;if(end<start)end+=86400000;
+    if(log.some(e=>e.type===type&&Math.abs(e.start-start)<60000)){skipped++;return}
+    const m=+(mins||'').replace(',','.')||Math.round((end-start)/6000)/10;
+    log.push({id:start+Math.random(),type,start,end,mins:m,label:type==='work'?(rest.join(',')||'Sin etiqueta'):NAMES[type]});added++});
+  log.sort((a,b)=>a.start-b.start);save();render();
+  if(added)$('iCsv').value='';
+  toast(`${added} importados`+(skipped?`, ${skipped} repetidos`:'')+(bad?`, ${bad} con error`:''))};
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|BUTTON|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();$('go').click()}});
+
+// catch up if a block ended while the page was closed
+if(st.running&&Date.now()>=st.endAt){const a=cfg.auto;cfg.auto=false;advance(st.endAt);cfg.auto=a}
+render();
+setInterval(tick,250);
+}
+</script>
+</body>
+</html>
